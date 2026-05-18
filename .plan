@@ -1,0 +1,57 @@
+ZeroClaw architecture plan
+
+Project shape
+- Use Vite + TypeScript as a client-only app with strict compiler settings.
+- Keep domain logic framework-independent so board behavior can be unit-tested without the DOM.
+- Use Vitest for model/state tests and Playwright for end-to-end desktop and mobile flows.
+
+Module structure
+- src/main.ts: Vite entrypoint, mounts the top-level app.
+- src/App.ts: top-level controller wiring game state, persistence, settings, and UI events.
+- src/types.ts: shared exported types for Cell, Board, Difficulty, GameStatus, MoveResult, Hint, PointerIntent, Settings, and BestTime.
+- src/game/board.ts: board creation, coordinate helpers, bounds checks, adjacency computation.
+- src/game/mines.ts: first-click-safe mine placement.
+- src/game/reveal.ts: reveal behavior and flood-fill for empty regions.
+- src/game/marks.ts: flag/question-mark cycling.
+- src/game/state.ts: game state machine, transitions, timer hooks, win/loss detection.
+- src/game/hints.ts: deterministic hint selection from current visible board state.
+- src/input/longPress.ts: long-press detector with cancellable timers.
+- src/input/pointer.ts: unified mouse/touch/pen intent mapping.
+- src/storage/bestTimes.ts: localStorage-backed best-times tracker with validation.
+- src/audio/sounds.ts: small sound-effects facade with mute support and graceful no-audio fallback.
+- src/ui/Layout.ts, BoardView.ts, StatusBar.ts, DifficultySelector.ts, InstructionsPanel.ts, Overlay.ts, HintButton.ts, ThemeToggle.ts, SoundToggle.ts: focused UI modules.
+- src/styles/*.css: base tokens, layout, board, controls, themes.
+- tests/unit/*.test.ts: model, state, input, storage, and edge-case tests.
+- tests/e2e/*.spec.ts: Playwright desktop and mobile coverage.
+
+Shared types
+- Coordinates should use zero-based row/col pairs and helper functions rather than string parsing at call sites.
+- Cell state should separate immutable mine/adjacency data from mutable reveal/mark state.
+- Public game actions should return typed results so UI can render status, effects, hints, and overlays without duplicating game rules.
+- Difficulty presets and custom-board validation should share one typed config path.
+
+Issue dependencies
+- #1 is the base for all implementation work.
+- #2, #3, and #4 establish quality gates; #3 depends on #1, #4 depends on #1 and the eventual UI.
+- #5 must precede game logic and UI contracts.
+- #6 precedes #7 through #11 because all board behavior depends on coordinates and adjacency.
+- #7, #8, #9, and #10 form the core game loop; #10 depends on reveal, marks, and mine placement.
+- #11 depends on visible board state from #6 through #10.
+- #12 and #13 can be developed after #5, then integrated into #15 and #19.
+- #14 establishes visual foundations before #15 through #18 and #21 through #23.
+- #15 through #18 build the primary UI on top of the game model.
+- #19 wires the app once core logic, input, and main UI pieces exist.
+- #20, #21, #22, and #23 are independent enhancements after #19 defines integration points.
+- #24 and #25 should be written after the app is playable through #19, then expanded for enhancements.
+- #26 and #27 should happen after the full feature set is present.
+- #28 is last and verifies production build, test commands, and deployment documentation.
+
+Key design decisions
+- Prefer pure functions for board and game logic; keep DOM, timers, audio, and localStorage behind thin adapters.
+- Generate mines only after the first reveal so the initial click and its adjacent cells can be kept safe when board size permits.
+- Use an explicit game status enum: ready, playing, won, lost. Timer behavior derives from status transitions.
+- Model marks as none -> flag -> question -> none to support the requested cycling behavior.
+- Use CSS variables for theme tokens so dark mode can switch without duplicating component styles.
+- Keep accessibility in mind from the first UI issue: buttons for interactive controls, ARIA labels for cells, keyboard navigation hooks, and status text that can be announced.
+- Validate custom board sizes and mine counts in one shared helper used by UI, tests, and future persistence.
+- Keep deployment docs lightweight: include install, test, build, preview, and static hosting notes once the production build is verified.
