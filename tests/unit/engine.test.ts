@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { BoardConfig, Cell, GameState } from '../../src/types';
+import type { BoardConfig, Cell, CellState, GameState } from '../../src/types';
 import {
   computeAdjacentMineCounts,
   createEmptyBoard,
@@ -11,6 +11,7 @@ import {
 import {
   createGameState,
   dispatchGameAction,
+  getHintCoordinate,
   hasWonGame,
 } from '../../src/game/engine';
 
@@ -168,6 +169,43 @@ describe('dispatchGameAction', () => {
   });
 });
 
+describe('getHintCoordinate', () => {
+  it('returns a currently hidden non-mine cell', () => {
+    const cells = withCellStates(
+      withMines(createEmptyBoard({ rows: 1, cols: 5 }), [{ row: 0, col: 0 }]),
+      [['hidden', 'revealed', 'flagged', 'questioned', 'hidden']],
+    );
+    const state = playingState({
+      cells,
+      config: { rows: 1, cols: 5, mines: 1, difficulty: 'custom' },
+    });
+
+    expect(getHintCoordinate(state)).toEqual({ row: 0, col: 4 });
+  });
+
+  it('returns null when no hidden non-mine cells are available', () => {
+    const cells = withCellStates(
+      withMines(createEmptyBoard({ rows: 1, cols: 3 }), [{ row: 0, col: 0 }]),
+      [['hidden', 'revealed', 'flagged']],
+    );
+    const state = playingState({
+      cells,
+      config: { rows: 1, cols: 3, mines: 1, difficulty: 'custom' },
+    });
+
+    expect(getHintCoordinate(state)).toBeNull();
+  });
+
+  it('returns null after the game has ended', () => {
+    const state = {
+      ...playingState({ cells: createEmptyBoard({ rows: 1, cols: 1 }) }),
+      status: 'lost',
+    } satisfies GameState;
+
+    expect(getHintCoordinate(state)).toBeNull();
+  });
+});
+
 function playingState(overrides: {
   readonly cells: Board;
   readonly config?: BoardConfig;
@@ -202,6 +240,18 @@ function withMines(board: Board, mines: readonly Coordinate[]): Cell[][] {
     row.map((cell) => ({
       ...cell,
       hasMine: mineKeys.has(keyFor(cell)),
+    })),
+  );
+}
+
+function withCellStates(
+  board: Board,
+  states: readonly (readonly CellState[])[],
+): Cell[][] {
+  return board.map((row, rowIndex) =>
+    row.map((cell, colIndex) => ({
+      ...cell,
+      state: states[rowIndex]?.[colIndex] ?? cell.state,
     })),
   );
 }
