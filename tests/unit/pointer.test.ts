@@ -82,6 +82,27 @@ describe('createUnifiedPointerHandler', () => {
     expect(revealEvents).toHaveLength(0);
   });
 
+  it('ignores pointerup after pointer cancellation', () => {
+    const target = new StyledEventTarget();
+    const revealEvents: Event[] = [];
+
+    createUnifiedPointerHandler(target);
+    target.addEventListener(REVEAL_EVENT_TYPE, (event) => {
+      revealEvents.push(event);
+    });
+    target.dispatchEvent(
+      pointerEvent('pointerdown', { button: 0, pointerId: 1 }),
+    );
+    target.dispatchEvent(
+      pointerEvent('pointercancel', { button: 0, pointerId: 1 }),
+    );
+    target.dispatchEvent(
+      pointerEvent('pointerup', { button: 0, pointerId: 1 }),
+    );
+
+    expect(revealEvents).toHaveLength(0);
+  });
+
   it('dispatches a normalized flag event and prevents native context menu', () => {
     const target = new StyledEventTarget();
     const flagEvents: CustomEvent<NormalizedPointerDetail>[] = [];

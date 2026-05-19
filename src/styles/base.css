@@ -368,20 +368,18 @@ input[aria-invalid='true'] {
     flex-direction: column;
   }
 
-  .status-pill {
-    width: 100%;
-  }
-
   .header-actions {
     width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .theme-toggle {
+  .theme-toggle,
+  .sfx-toggle,
+  .status-pill {
+    min-width: 0;
     width: 100%;
-  }
-
-  .sfx-toggle {
-    width: 100%;
+    padding-inline: 0.5rem;
   }
 
   .app-main {

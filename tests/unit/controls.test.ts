@@ -41,6 +41,18 @@ describe('validateBoardConfig', () => {
         .message,
     ).toContain('15');
   });
+
+  it('rejects non-integer numeric values', () => {
+    expect(validateBoardConfig(customConfig({ rows: 5.5 })).message).toContain(
+      'Rows',
+    );
+    expect(validateBoardConfig(customConfig({ cols: 8.25 })).message).toContain(
+      'Columns',
+    );
+    expect(validateBoardConfig(customConfig({ mines: 4.5 })).message).toBe(
+      'Mines must be at least 1.',
+    );
+  });
 });
 
 function customConfig(overrides: Partial<BoardConfig>): BoardConfig {

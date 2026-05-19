@@ -78,6 +78,7 @@ export function createUnifiedPointerHandler(
 
   target.addEventListener('pointerdown', handlePointerDown, { passive: true });
   target.addEventListener('pointerup', handlePointerUp, { passive: true });
+  target.addEventListener('pointercancel', resetPointer, { passive: true });
   target.addEventListener('contextmenu', handleContextMenu);
 
   return {
@@ -90,6 +91,7 @@ export function createUnifiedPointerHandler(
       resetPointer();
       target.removeEventListener('pointerdown', handlePointerDown);
       target.removeEventListener('pointerup', handlePointerUp);
+      target.removeEventListener('pointercancel', resetPointer);
       target.removeEventListener('contextmenu', handleContextMenu);
 
       if (target.style !== undefined && previousTouchAction !== null) {
