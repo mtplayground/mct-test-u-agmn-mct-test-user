@@ -47,6 +47,8 @@ TypeScript. It is a client-only app with no backend or database dependency.
 - Keep core game behavior testable as pure functions where possible.
 - Validate custom boards before restarting: rows/columns are 5-40 and mines
   must leave room for first-click safety.
+- Vite dev and preview servers bind to `0.0.0.0:8080`; preview explicitly
+  allows the deployed Sprite host so production verification can reach it.
 - Serve production builds from the site root because Vite emits root-relative
   `/assets/...` references in `dist/index.html`.
 - Standard checks are `npm run test`, `npm run lint`, `npm run format:check`,
