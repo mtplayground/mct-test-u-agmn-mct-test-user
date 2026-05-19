@@ -11,3 +11,34 @@ test('loads the built application', async ({ page }) => {
   await expect(page.getByRole('grid', { name: 'Game board' })).toBeVisible();
   await expect(page.locator('.board-cell')).toHaveCount(64);
 });
+
+test('routes board interactions through the app controller', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  await page.locator('.board-cell').first().click();
+
+  await expect(page.getByLabel('Game status', { exact: true })).toContainText(
+    'Playing',
+  );
+  await expect(
+    page.locator('.board-cell[data-state="revealed"]').first(),
+  ).toBeVisible();
+
+  const flagTarget = page.locator('.board-cell[data-state="hidden"]').first();
+  const row = await flagTarget.getAttribute('data-row');
+  const col = await flagTarget.getAttribute('data-col');
+
+  expect(row).not.toBeNull();
+  expect(col).not.toBeNull();
+
+  const flaggedCell = page.locator(
+    `.board-cell[data-row="${String(row)}"][data-col="${String(col)}"]`,
+  );
+
+  await flagTarget.click({ button: 'right' });
+
+  await expect(flaggedCell).toHaveAttribute('data-state', 'flagged');
+  await expect(page.getByLabel('Current game metrics')).toContainText('9');
+});

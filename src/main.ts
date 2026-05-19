@@ -2,11 +2,7 @@ import './styles/theme.css';
 import './styles/base.css';
 import './styles/board.css';
 
-import { createGameState } from './game/engine';
-import { createBoardView } from './ui/board-view';
-import { createControls } from './ui/controls';
-import { createOutcomeOverlay } from './ui/outcome-overlay';
-import { createStatusBar } from './ui/status-bar';
+import { createApp } from './ui/app';
 
 const INITIAL_BOARD_CONFIG = {
   rows: 8,
@@ -22,102 +18,8 @@ if (appRoot === null) {
 }
 
 const appTitle = import.meta.env.VITE_APP_TITLE ?? 'ZeroClaw';
-const safeAppTitle = escapeHtml(appTitle);
 
-appRoot.innerHTML = `
-  <div class="app-shell">
-    <header class="app-header">
-      <div class="title-group">
-        <p class="app-kicker">Minesweeper</p>
-        <h1 id="app-title">${safeAppTitle}</h1>
-      </div>
-      <div class="status-pill" aria-label="Game status" data-status-summary>Ready</div>
-    </header>
-
-    <main class="app-main" aria-labelledby="app-title">
-      <section class="board-panel" aria-label="Game board">
-        <div class="board-surface" data-board-view></div>
-        <div data-outcome-overlay></div>
-      </section>
-
-      <aside class="info-panel" aria-label="Game details">
-        <div data-controls></div>
-        <div data-status-bar></div>
-        <details class="instructions">
-          <summary>Instructions</summary>
-          <div class="instructions-body">
-            <p>Reveal every safe cell without opening a mine.</p>
-            <ul>
-              <li>Desktop: left click reveals, right click marks.</li>
-              <li>Mobile: tap reveals, long press marks.</li>
-              <li>Flags and question marks help track suspected mines.</li>
-            </ul>
-          </div>
-        </details>
-      </aside>
-    </main>
-  </div>
-`;
-
-const boardElement = appRoot.querySelector<HTMLElement>('[data-board-view]');
-const controlsElement = appRoot.querySelector<HTMLElement>('[data-controls]');
-const outcomeOverlayElement = appRoot.querySelector<HTMLElement>(
-  '[data-outcome-overlay]',
-);
-const statusBarElement =
-  appRoot.querySelector<HTMLElement>('[data-status-bar]');
-const statusSummaryElement = appRoot.querySelector<HTMLElement>(
-  '[data-status-summary]',
-);
-
-if (boardElement === null) {
-  throw new Error('Board view root element was not found.');
-}
-
-if (controlsElement === null) {
-  throw new Error('Controls root element was not found.');
-}
-
-if (outcomeOverlayElement === null) {
-  throw new Error('Outcome overlay root element was not found.');
-}
-
-if (statusBarElement === null) {
-  throw new Error('Status bar root element was not found.');
-}
-
-const initialGameState = createGameState(INITIAL_BOARD_CONFIG);
-const boardView = createBoardView(boardElement, initialGameState);
-const outcomeOverlay = createOutcomeOverlay(
-  outcomeOverlayElement,
-  initialGameState,
-);
-const statusBar = createStatusBar(statusBarElement, initialGameState, {
-  summaryElement: statusSummaryElement,
+createApp(appRoot, {
+  title: appTitle,
+  initialConfig: INITIAL_BOARD_CONFIG,
 });
-
-createControls(controlsElement, initialGameState.config, {
-  onRestart: (config) => {
-    const nextState = createGameState(config);
-
-    boardView.update(nextState);
-    outcomeOverlay.update(nextState);
-    statusBar.update(nextState);
-  },
-});
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => {
-    const replacement = HTML_ESCAPE_LOOKUP[character];
-
-    return replacement ?? character;
-  });
-}
-
-const HTML_ESCAPE_LOOKUP: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-};
