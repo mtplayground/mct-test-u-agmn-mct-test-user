@@ -1,7 +1,9 @@
 export const REVEAL_EVENT_TYPE = 'reveal';
 export const FLAG_EVENT_TYPE = 'flag';
+export const DBLCLICK_EVENT_TYPE = 'dblclick';
+const DOUBLE_TAP_THRESHOLD_MS = 300;
 
-export type PointerIntent = 'reveal' | 'flag';
+export type PointerIntent = 'reveal' | 'flag' | 'dblclick';
 
 export interface NormalizedPointerDetail {
   readonly intent: PointerIntent;
@@ -27,6 +29,8 @@ export function createUnifiedPointerHandler(
   const previousTouchAction = target.style?.touchAction ?? null;
   let isPrimaryPointerDown = false;
   let activePointerId: number | null = null;
+  let activePointerDownTimeStamp: number | null = null;
+  let lastTap: LastTap | null = null;
   let destroyed = false;
 
   if (target.style !== undefined) {
@@ -36,6 +40,11 @@ export function createUnifiedPointerHandler(
   const resetPointer = (): void => {
     isPrimaryPointerDown = false;
     activePointerId = null;
+    activePointerDownTimeStamp = null;
+  };
+
+  const clearLastTap = (): void => {
+    lastTap = null;
   };
 
   const handlePointerDown = (event: Event): void => {
@@ -45,6 +54,7 @@ export function createUnifiedPointerHandler(
 
     isPrimaryPointerDown = true;
     activePointerId = getPointerId(event);
+    activePointerDownTimeStamp = getEventTimeStamp(event);
   };
 
   const handlePointerUp = (event: Event): void => {
@@ -62,8 +72,32 @@ export function createUnifiedPointerHandler(
       return;
     }
 
+    const pointerDownTimeStamp = activePointerDownTimeStamp;
+
     resetPointer();
     dispatchPointerIntent(target, 'reveal', event);
+
+    if (isDoubleTap(event, lastTap, pointerDownTimeStamp)) {
+      dispatchPointerIntent(target, 'dblclick', event);
+      clearLastTap();
+      return;
+    }
+
+    lastTap = buildLastTap(event, pointerDownTimeStamp);
+  };
+
+  const handleDblClick = (event: Event): void => {
+    if (
+      destroyed ||
+      isNormalizedPointerIntentEvent(event) ||
+      getEventButton(event) !== 0
+    ) {
+      return;
+    }
+
+    clearLastTap();
+    event.stopImmediatePropagation();
+    dispatchPointerIntent(target, 'dblclick', event);
   };
 
   const handleContextMenu = (event: Event): void => {
@@ -73,6 +107,7 @@ export function createUnifiedPointerHandler(
 
     event.preventDefault();
     resetPointer();
+    clearLastTap();
     dispatchPointerIntent(target, 'flag', event);
   };
 
@@ -108,6 +143,7 @@ export function createUnifiedPointerHandler(
   target.addEventListener('pointerup', handlePointerUp, { passive: true });
   target.addEventListener('pointercancel', resetPointer, { passive: true });
   target.addEventListener('contextmenu', handleContextMenu);
+  target.addEventListener('dblclick', handleDblClick);
   target.addEventListener('keydown', handleKeyDown);
 
   return {
@@ -118,10 +154,12 @@ export function createUnifiedPointerHandler(
 
       destroyed = true;
       resetPointer();
+      clearLastTap();
       target.removeEventListener('pointerdown', handlePointerDown);
       target.removeEventListener('pointerup', handlePointerUp);
       target.removeEventListener('pointercancel', resetPointer);
       target.removeEventListener('contextmenu', handleContextMenu);
+      target.removeEventListener('dblclick', handleDblClick);
       target.removeEventListener('keydown', handleKeyDown);
 
       if (target.style !== undefined && previousTouchAction !== null) {
@@ -137,17 +175,25 @@ function dispatchPointerIntent(
   sourceEvent: Event,
 ): void {
   target.dispatchEvent(
-    createPointerIntentEvent(
-      intent === 'reveal' ? REVEAL_EVENT_TYPE : FLAG_EVENT_TYPE,
-      {
-        intent,
-        sourceEvent,
-        button: getEventButton(sourceEvent),
-        pointerId: getPointerId(sourceEvent),
-        pointerType: getPointerType(sourceEvent),
-      },
-    ),
+    createPointerIntentEvent(getEventTypeForIntent(intent), {
+      intent,
+      sourceEvent,
+      button: getEventButton(sourceEvent),
+      pointerId: getPointerId(sourceEvent),
+      pointerType: getPointerType(sourceEvent),
+    }),
   );
+}
+
+function getEventTypeForIntent(intent: PointerIntent): string {
+  switch (intent) {
+    case 'reveal':
+      return REVEAL_EVENT_TYPE;
+    case 'flag':
+      return FLAG_EVENT_TYPE;
+    case 'dblclick':
+      return DBLCLICK_EVENT_TYPE;
+  }
 }
 
 function createPointerIntentEvent(
@@ -191,8 +237,26 @@ function getEventKey(event: Event): string | null {
   return typeof value === 'string' ? value : null;
 }
 
+function getEventTimeStamp(event: Event): number {
+  return Number.isFinite(event.timeStamp) ? event.timeStamp : Date.now();
+}
+
 function getEventProperty(event: Event, property: string): unknown {
   return (event as unknown as Record<string, unknown>)[property];
+}
+
+function isNormalizedPointerIntentEvent(event: Event): boolean {
+  const detail = getEventProperty(event, 'detail');
+
+  return (
+    typeof detail === 'object' &&
+    detail !== null &&
+    getRecordProperty(detail, 'intent') === 'dblclick'
+  );
+}
+
+function getRecordProperty(value: object, property: string): unknown {
+  return (value as Record<string, unknown>)[property];
 }
 
 function moveFocusedCell(
@@ -232,6 +296,78 @@ function moveFocusedCell(
   nextCell.focus();
 
   return true;
+}
+
+interface LastTap {
+  readonly timeStamp: number;
+  readonly pointerType: string | null;
+  readonly targetKey: string | null;
+}
+
+function buildLastTap(
+  event: Event,
+  pointerDownTimeStamp: number | null,
+): LastTap | null {
+  const pointerType = getPointerType(event);
+
+  if (
+    pointerType === 'mouse' ||
+    !isTapDurationAllowed(event, pointerDownTimeStamp)
+  ) {
+    return null;
+  }
+
+  return {
+    timeStamp: getEventTimeStamp(event),
+    pointerType,
+    targetKey: getTargetCellKey(event),
+  };
+}
+
+function isDoubleTap(
+  event: Event,
+  previousTap: LastTap | null,
+  pointerDownTimeStamp: number | null,
+): boolean {
+  if (
+    previousTap === null ||
+    getPointerType(event) === 'mouse' ||
+    !isTapDurationAllowed(event, pointerDownTimeStamp)
+  ) {
+    return false;
+  }
+
+  const elapsedMs = getEventTimeStamp(event) - previousTap.timeStamp;
+
+  return (
+    elapsedMs >= 0 &&
+    elapsedMs <= DOUBLE_TAP_THRESHOLD_MS &&
+    getPointerType(event) === previousTap.pointerType &&
+    getTargetCellKey(event) === previousTap.targetKey
+  );
+}
+
+function isTapDurationAllowed(
+  event: Event,
+  pointerDownTimeStamp: number | null,
+): boolean {
+  if (pointerDownTimeStamp === null) {
+    return true;
+  }
+
+  const durationMs = getEventTimeStamp(event) - pointerDownTimeStamp;
+
+  return durationMs >= 0 && durationMs <= DOUBLE_TAP_THRESHOLD_MS;
+}
+
+function getTargetCellKey(event: Event): string | null {
+  const cell = getCellElementFromEvent(event);
+
+  if (cell === null) {
+    return null;
+  }
+
+  return `${cell.dataset.row ?? ''}:${cell.dataset.col ?? ''}`;
 }
 
 function getKeyboardNavigationDelta(
