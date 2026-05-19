@@ -64,7 +64,11 @@ export function createApp(
       </header>
 
       <main class="app-main" aria-labelledby="app-title">
-        <section class="board-panel" aria-label="Game board">
+        <section class="board-panel" aria-labelledby="board-title">
+          <h2 class="sr-only" id="board-title">Game board</h2>
+          <p class="sr-only" id="board-keyboard-help">
+            Use arrow keys to move between cells, Enter or Space to reveal, and F to flag.
+          </p>
           <div class="board-surface" data-board-view></div>
           <div data-outcome-overlay></div>
         </section>
