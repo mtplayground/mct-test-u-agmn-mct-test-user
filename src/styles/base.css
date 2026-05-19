@@ -133,7 +133,66 @@ h1 {
 }
 
 .info-panel {
+  display: grid;
+  gap: 1.25rem;
   padding: 1rem;
+}
+
+.controls {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 1.25rem;
+}
+
+.controls-form,
+.custom-fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.custom-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.field-label {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.field select,
+.field input {
+  width: 100%;
+  min-height: 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 0.5rem 0.625rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.primary-button {
+  min-height: 2.625rem;
+  border: 1px solid var(--color-accent-strong);
+  border-radius: var(--radius-control);
+  padding: 0.625rem 0.875rem;
+  background: var(--color-accent);
+  color: var(--color-page);
+  font-weight: 800;
 }
 
 .status-bar {
@@ -193,6 +252,10 @@ h1 {
   }
 
   .app-main {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-fields {
     grid-template-columns: 1fr;
   }
 }

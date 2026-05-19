@@ -4,6 +4,7 @@ import './styles/board.css';
 
 import { createGameState } from './game/engine';
 import { createBoardView } from './ui/board-view';
+import { createControls } from './ui/controls';
 import { createStatusBar } from './ui/status-bar';
 
 const INITIAL_BOARD_CONFIG = {
@@ -38,6 +39,7 @@ appRoot.innerHTML = `
       </section>
 
       <aside class="info-panel" aria-label="Game details">
+        <div data-controls></div>
         <div data-status-bar></div>
       </aside>
     </main>
@@ -45,6 +47,7 @@ appRoot.innerHTML = `
 `;
 
 const boardElement = appRoot.querySelector<HTMLElement>('[data-board-view]');
+const controlsElement = appRoot.querySelector<HTMLElement>('[data-controls]');
 const statusBarElement =
   appRoot.querySelector<HTMLElement>('[data-status-bar]');
 const statusSummaryElement = appRoot.querySelector<HTMLElement>(
@@ -55,15 +58,27 @@ if (boardElement === null) {
   throw new Error('Board view root element was not found.');
 }
 
+if (controlsElement === null) {
+  throw new Error('Controls root element was not found.');
+}
+
 if (statusBarElement === null) {
   throw new Error('Status bar root element was not found.');
 }
 
 const initialGameState = createGameState(INITIAL_BOARD_CONFIG);
-
-createBoardView(boardElement, initialGameState);
-createStatusBar(statusBarElement, initialGameState, {
+const boardView = createBoardView(boardElement, initialGameState);
+const statusBar = createStatusBar(statusBarElement, initialGameState, {
   summaryElement: statusSummaryElement,
+});
+
+createControls(controlsElement, initialGameState.config, {
+  onRestart: (config) => {
+    const nextState = createGameState(config);
+
+    boardView.update(nextState);
+    statusBar.update(nextState);
+  },
 });
 
 function escapeHtml(value: string): string {
