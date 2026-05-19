@@ -86,6 +86,13 @@ h1 {
   letter-spacing: 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.theme-toggle,
 .status-pill {
   min-width: 6.5rem;
   border: 1px solid var(--color-border);
@@ -96,6 +103,12 @@ h1 {
   color: var(--color-accent-strong);
   font-weight: 700;
   text-align: center;
+}
+
+.theme-toggle[aria-pressed='true'] {
+  border-color: var(--color-accent-strong);
+  background: var(--color-accent);
+  color: var(--color-page);
 }
 
 .app-main {
@@ -333,6 +346,14 @@ input[aria-invalid='true'] {
   }
 
   .status-pill {
+    width: 100%;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .theme-toggle {
     width: 100%;
   }
 
