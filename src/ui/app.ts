@@ -23,6 +23,7 @@ import { createBoardView } from './board-view';
 import { createControls } from './controls';
 import { createOutcomeOverlay } from './outcome-overlay';
 import { createStatusBar } from './status-bar';
+import { createThemeToggle } from './theme';
 
 export interface AppOptions {
   readonly title: string;
@@ -50,7 +51,10 @@ export function createApp(
           <p class="app-kicker">Minesweeper</p>
           <h1 id="app-title">${safeAppTitle}</h1>
         </div>
-        <div class="status-pill" aria-label="Game status" data-status-summary>Ready</div>
+        <div class="header-actions">
+          <button class="theme-toggle" data-theme-toggle type="button">Theme</button>
+          <div class="status-pill" aria-label="Game status" data-status-summary>Ready</div>
+        </div>
       </header>
 
       <main class="app-main" aria-labelledby="app-title">
@@ -88,6 +92,7 @@ export function createApp(
   const statusBar = createStatusBar(elements.statusBar, state, {
     summaryElement: elements.statusSummary,
   });
+  const themeToggle = createThemeToggle(elements.themeToggle);
   const controls = createControls(elements.controls, state.config, {
     onRestart: (config) => {
       setState(createGameState(config));
@@ -176,6 +181,7 @@ export function createApp(
       longPressDetector.destroy();
       controls.destroy();
       statusBar.destroy();
+      themeToggle.destroy();
       outcomeOverlay.destroy();
       boardView.destroy();
       subscribers.clear();
@@ -201,6 +207,7 @@ interface AppElements {
   readonly outcomeOverlay: HTMLElement;
   readonly statusBar: HTMLElement;
   readonly statusSummary: HTMLElement | null;
+  readonly themeToggle: HTMLButtonElement;
 }
 
 function queryAppElements(root: HTMLElement): AppElements {
@@ -210,20 +217,29 @@ function queryAppElements(root: HTMLElement): AppElements {
     outcomeOverlay: queryRequiredElement(root, '[data-outcome-overlay]'),
     statusBar: queryRequiredElement(root, '[data-status-bar]'),
     statusSummary: root.querySelector<HTMLElement>('[data-status-summary]'),
+    themeToggle: queryRequiredElement(
+      root,
+      '[data-theme-toggle]',
+      HTMLButtonElement,
+    ),
   };
 }
 
-function queryRequiredElement(
+function queryRequiredElement<TElement extends HTMLElement = HTMLElement>(
   root: HTMLElement,
   selector: string,
-): HTMLElement {
-  const element = root.querySelector<HTMLElement>(selector);
+  constructor?: new () => TElement,
+): TElement {
+  const element = root.querySelector(selector);
 
-  if (element === null) {
-    throw new Error(`Application element ${selector} was not found.`);
+  if (
+    element !== null &&
+    (constructor === undefined || element instanceof constructor)
+  ) {
+    return element as TElement;
   }
 
-  return element;
+  throw new Error(`Application element ${selector} was not found.`);
 }
 
 function getCoordinateFromIntentEvent(

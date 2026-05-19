@@ -42,3 +42,23 @@ test('routes board interactions through the app controller', async ({
   await expect(flaggedCell).toHaveAttribute('data-state', 'flagged');
   await expect(page.getByLabel('Current game metrics')).toContainText('9');
 });
+
+test('toggles and persists the selected theme', async ({ page }) => {
+  await page.goto('/');
+
+  const html = page.locator('html');
+  const initialTheme = await html.getAttribute('data-theme');
+
+  await page
+    .getByRole('button', { name: /Switch to (dark|light) theme/ })
+    .click();
+
+  const selectedTheme = await html.getAttribute('data-theme');
+
+  expect(selectedTheme).not.toBeNull();
+  expect(selectedTheme).not.toBe(initialTheme);
+
+  await page.reload();
+
+  await expect(html).toHaveAttribute('data-theme', String(selectedTheme));
+});
