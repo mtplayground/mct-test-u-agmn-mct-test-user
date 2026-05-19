@@ -56,6 +56,75 @@ export function revealCell(board: Board, coordinate: Coordinate): RevealResult {
   };
 }
 
+export function revealAdjacentCells(
+  board: Board,
+  coordinate: Coordinate,
+): RevealResult {
+  const size = getBoardSize(board);
+
+  if (!isCoordinateInBounds(size, coordinate)) {
+    throw new RangeError(
+      `Coordinate (${String(coordinate.row)}, ${String(coordinate.col)}) is outside a ${String(size.rows)}x${String(size.cols)} board.`,
+    );
+  }
+
+  let nextBoard = cloneBoard(board);
+  const target = getCell(nextBoard, coordinate);
+
+  if (target.state !== 'revealed' || target.adjacentMines === 0) {
+    return {
+      board: nextBoard,
+      status: 'ignored',
+      hitMine: false,
+      revealed: [],
+    };
+  }
+
+  const neighbors = getNeighborCoordinates(size, coordinate);
+  const flaggedNeighborCount = neighbors.filter(
+    (neighbor) => getCell(nextBoard, neighbor).state === 'flagged',
+  ).length;
+
+  if (flaggedNeighborCount !== target.adjacentMines) {
+    return {
+      board: nextBoard,
+      status: 'ignored',
+      hitMine: false,
+      revealed: [],
+    };
+  }
+
+  const revealed: Coordinate[] = [];
+
+  for (const neighbor of neighbors) {
+    const neighborCell = getCell(nextBoard, neighbor);
+
+    if (neighborCell.state === 'flagged') {
+      continue;
+    }
+
+    const revealResult = revealCell(nextBoard, neighbor);
+    nextBoard = revealResult.board;
+    revealed.push(...revealResult.revealed);
+
+    if (revealResult.hitMine) {
+      return {
+        board: nextBoard,
+        status: 'hit-mine',
+        hitMine: true,
+        revealed,
+      };
+    }
+  }
+
+  return {
+    board: nextBoard,
+    status: revealed.length > 0 ? 'revealed' : 'ignored',
+    hitMine: false,
+    revealed,
+  };
+}
+
 function revealSafeRegion(board: Cell[][], start: Coordinate): Coordinate[] {
   const size = getBoardSize(board);
   const queue: Coordinate[] = [start];
