@@ -93,6 +93,7 @@ h1 {
 }
 
 .theme-toggle,
+.sfx-toggle,
 .status-pill {
   min-width: 6.5rem;
   border: 1px solid var(--color-border);
@@ -105,7 +106,8 @@ h1 {
   text-align: center;
 }
 
-.theme-toggle[aria-pressed='true'] {
+.theme-toggle[aria-pressed='true'],
+.sfx-toggle[aria-pressed='true'] {
   border-color: var(--color-accent-strong);
   background: var(--color-accent);
   color: var(--color-page);
@@ -354,6 +356,10 @@ input[aria-invalid='true'] {
   }
 
   .theme-toggle {
+    width: 100%;
+  }
+
+  .sfx-toggle {
     width: 100%;
   }
 
