@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DBLCLICK_EVENT_TYPE,
   FLAG_EVENT_TYPE,
   REVEAL_EVENT_TYPE,
   createUnifiedPointerHandler,
@@ -129,6 +130,83 @@ describe('createUnifiedPointerHandler', () => {
     });
   });
 
+  it('dispatches a normalized dblclick event for native desktop double-click', () => {
+    const target = new StyledEventTarget();
+    const dblClickEvents: CustomEvent<NormalizedPointerDetail>[] = [];
+    const dblClick = pointerEvent('dblclick', {
+      button: 0,
+      pointerId: 11,
+      pointerType: 'mouse',
+    });
+
+    createUnifiedPointerHandler(target);
+    target.addEventListener(DBLCLICK_EVENT_TYPE, (event) => {
+      dblClickEvents.push(event as CustomEvent<NormalizedPointerDetail>);
+    });
+    target.dispatchEvent(dblClick);
+
+    expect(dblClickEvents).toHaveLength(1);
+    expect(dblClickEvents[0]?.detail).toEqual({
+      intent: 'dblclick',
+      sourceEvent: dblClick,
+      button: 0,
+      pointerId: 11,
+      pointerType: 'mouse',
+    });
+  });
+
+  it('dispatches a normalized dblclick event for fast touch double-tap', () => {
+    const target = new StyledEventTarget();
+    const revealEvents: CustomEvent<NormalizedPointerDetail>[] = [];
+    const dblClickEvents: CustomEvent<NormalizedPointerDetail>[] = [];
+    const firstPointerDown = pointerEvent('pointerdown', {
+      button: 0,
+      pointerId: 5,
+      pointerType: 'touch',
+      timeStamp: 100,
+    });
+    const firstPointerUp = pointerEvent('pointerup', {
+      button: 0,
+      pointerId: 5,
+      pointerType: 'touch',
+      timeStamp: 110,
+    });
+    const secondPointerDown = pointerEvent('pointerdown', {
+      button: 0,
+      pointerId: 6,
+      pointerType: 'touch',
+      timeStamp: 250,
+    });
+    const secondPointerUp = pointerEvent('pointerup', {
+      button: 0,
+      pointerId: 6,
+      pointerType: 'touch',
+      timeStamp: 260,
+    });
+
+    createUnifiedPointerHandler(target);
+    target.addEventListener(REVEAL_EVENT_TYPE, (event) => {
+      revealEvents.push(event as CustomEvent<NormalizedPointerDetail>);
+    });
+    target.addEventListener(DBLCLICK_EVENT_TYPE, (event) => {
+      dblClickEvents.push(event as CustomEvent<NormalizedPointerDetail>);
+    });
+    target.dispatchEvent(firstPointerDown);
+    target.dispatchEvent(firstPointerUp);
+    target.dispatchEvent(secondPointerDown);
+    target.dispatchEvent(secondPointerUp);
+
+    expect(revealEvents).toHaveLength(2);
+    expect(dblClickEvents).toHaveLength(1);
+    expect(dblClickEvents[0]?.detail).toEqual({
+      intent: 'dblclick',
+      sourceEvent: secondPointerUp,
+      button: 0,
+      pointerId: 6,
+      pointerType: 'touch',
+    });
+  });
+
   it('removes listeners on destroy', () => {
     const target = new StyledEventTarget();
     const revealEvents: Event[] = [];
@@ -160,6 +238,7 @@ function pointerEvent(
     readonly button?: number;
     readonly pointerId?: number;
     readonly pointerType?: string;
+    readonly timeStamp?: number;
   } = {},
 ): Event {
   const event = new Event(type, { cancelable: true });
@@ -172,6 +251,10 @@ function pointerEvent(
 
   if (options.pointerType !== undefined) {
     defineEventProperty(event, 'pointerType', options.pointerType);
+  }
+
+  if (options.timeStamp !== undefined) {
+    defineEventProperty(event, 'timeStamp', options.timeStamp);
   }
 
   return event;
