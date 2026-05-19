@@ -12,6 +12,7 @@ import {
   createLongPressDetector,
 } from '../input/long-press';
 import {
+  DBLCLICK_EVENT_TYPE,
   FLAG_EVENT_TYPE,
   REVEAL_EVENT_TYPE,
   createUnifiedPointerHandler,
@@ -147,6 +148,16 @@ export function createApp(
     dispatchBoardAction(event, 'flag');
   };
 
+  const handleDblClick = (
+    event: Event | CustomEvent<NormalizedPointerDetail>,
+  ): void => {
+    if (state.status !== 'playing') {
+      return;
+    }
+
+    dispatchBoardAction(event, 'reveal-adjacent');
+  };
+
   const handleLongPress = (
     event: Event | CustomEvent<{ readonly sourceEvent: Event }>,
   ): void => {
@@ -224,6 +235,7 @@ export function createApp(
 
   elements.board.addEventListener(REVEAL_EVENT_TYPE, handleReveal);
   elements.board.addEventListener(FLAG_EVENT_TYPE, handleFlag);
+  elements.board.addEventListener(DBLCLICK_EVENT_TYPE, handleDblClick);
   elements.board.addEventListener(LONG_PRESS_EVENT_TYPE, handleLongPress);
 
   return {
@@ -232,6 +244,7 @@ export function createApp(
     destroy: () => {
       elements.board.removeEventListener(REVEAL_EVENT_TYPE, handleReveal);
       elements.board.removeEventListener(FLAG_EVENT_TYPE, handleFlag);
+      elements.board.removeEventListener(DBLCLICK_EVENT_TYPE, handleDblClick);
       elements.board.removeEventListener(
         LONG_PRESS_EVENT_TYPE,
         handleLongPress,
