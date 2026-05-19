@@ -74,6 +74,24 @@ export function hasWonGame(board: Board): boolean {
     .every((cell) => cell.hasMine || cell.state === 'revealed');
 }
 
+export function getHintCoordinate(state: GameState): Coordinate | null {
+  if (isTerminalStatus(state.status)) {
+    return null;
+  }
+
+  getBoardSize(state.cells);
+
+  const hintCell = state.cells
+    .flat()
+    .find((cell) => !cell.hasMine && cell.state === 'hidden');
+
+  if (hintCell === undefined) {
+    return null;
+  }
+
+  return { row: hintCell.row, col: hintCell.col };
+}
+
 function dispatchFlagAction(
   state: GameState,
   coordinate: Coordinate,
