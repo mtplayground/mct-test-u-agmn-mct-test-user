@@ -119,6 +119,7 @@ function configureGridElement(
   element.classList.add('board-grid');
   element.setAttribute('role', 'grid');
   element.setAttribute('aria-label', 'Game board');
+  element.setAttribute('aria-describedby', 'board-keyboard-help');
   element.setAttribute('aria-rowcount', String(dimensions.rows));
   element.setAttribute('aria-colcount', String(dimensions.cols));
   element.style.gridTemplateColumns = `repeat(${String(dimensions.cols)}, minmax(0, 1fr))`;
@@ -129,6 +130,7 @@ function createCellElement(coordinate: Coordinate): HTMLButtonElement {
   cellElement.type = 'button';
   cellElement.className = 'board-cell';
   cellElement.setAttribute('role', 'gridcell');
+  cellElement.tabIndex = coordinate.row === 0 && coordinate.col === 0 ? 0 : -1;
   cellElement.dataset.row = String(coordinate.row);
   cellElement.dataset.col = String(coordinate.col);
 
@@ -191,28 +193,29 @@ function getCellClassName(cell: Cell): string {
 function getCellLabel(cell: Cell): string {
   const row = cell.row + 1;
   const col = cell.col + 1;
+  const position = `row ${String(row)}, column ${String(col)}`;
 
   if (cell.state === 'flagged') {
-    return `Flagged cell row ${String(row)}, column ${String(col)}`;
+    return `Flagged cell, ${position}`;
   }
 
   if (cell.state === 'questioned') {
-    return `Questioned cell row ${String(row)}, column ${String(col)}`;
+    return `Questioned cell, ${position}`;
   }
 
   if (cell.state !== 'revealed') {
-    return `Hidden cell row ${String(row)}, column ${String(col)}`;
+    return `Hidden cell, ${position}`;
   }
 
   if (cell.hasMine) {
-    return `Mine cell row ${String(row)}, column ${String(col)}`;
+    return `Mine, ${position}`;
   }
 
   if (cell.adjacentMines === 0) {
-    return `Empty cell row ${String(row)}, column ${String(col)}`;
+    return `No adjacent mines, ${position}`;
   }
 
-  return `Cell row ${String(row)}, column ${String(col)}, ${String(cell.adjacentMines)} adjacent mines`;
+  return `${String(cell.adjacentMines)} ${cell.adjacentMines === 1 ? 'mine' : 'mines'} adjacent, ${position}`;
 }
 
 function getCellSignature(cell: Cell): string {

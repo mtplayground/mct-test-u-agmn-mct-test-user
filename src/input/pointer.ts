@@ -76,10 +76,39 @@ export function createUnifiedPointerHandler(
     dispatchPointerIntent(target, 'flag', event);
   };
 
+  const handleKeyDown = (event: Event): void => {
+    if (destroyed) {
+      return;
+    }
+
+    const key = getEventKey(event);
+
+    if (key === null) {
+      return;
+    }
+
+    if (moveFocusedCell(target, event, key)) {
+      event.preventDefault();
+      return;
+    }
+
+    if (key === 'Enter' || key === ' ') {
+      event.preventDefault();
+      dispatchPointerIntent(target, 'reveal', event);
+      return;
+    }
+
+    if (key.toLowerCase() === 'f') {
+      event.preventDefault();
+      dispatchPointerIntent(target, 'flag', event);
+    }
+  };
+
   target.addEventListener('pointerdown', handlePointerDown, { passive: true });
   target.addEventListener('pointerup', handlePointerUp, { passive: true });
   target.addEventListener('pointercancel', resetPointer, { passive: true });
   target.addEventListener('contextmenu', handleContextMenu);
+  target.addEventListener('keydown', handleKeyDown);
 
   return {
     destroy: () => {
@@ -93,6 +122,7 @@ export function createUnifiedPointerHandler(
       target.removeEventListener('pointerup', handlePointerUp);
       target.removeEventListener('pointercancel', resetPointer);
       target.removeEventListener('contextmenu', handleContextMenu);
+      target.removeEventListener('keydown', handleKeyDown);
 
       if (target.style !== undefined && previousTouchAction !== null) {
         target.style.touchAction = previousTouchAction;
@@ -155,6 +185,107 @@ function getPointerType(event: Event): string | null {
   return typeof value === 'string' ? value : null;
 }
 
+function getEventKey(event: Event): string | null {
+  const value = getEventProperty(event, 'key');
+
+  return typeof value === 'string' ? value : null;
+}
+
 function getEventProperty(event: Event, property: string): unknown {
   return (event as unknown as Record<string, unknown>)[property];
+}
+
+function moveFocusedCell(
+  target: EventTarget,
+  event: Event,
+  key: string,
+): boolean {
+  const delta = getKeyboardNavigationDelta(key);
+
+  if (delta === null) {
+    return false;
+  }
+
+  const currentCell = getCellElementFromEvent(event);
+
+  if (currentCell === null) {
+    return true;
+  }
+
+  const row = Number.parseInt(currentCell.dataset.row ?? '', 10);
+  const col = Number.parseInt(currentCell.dataset.col ?? '', 10);
+
+  if (!Number.isInteger(row) || !Number.isInteger(col)) {
+    return true;
+  }
+
+  const nextCell = getCellElementAt(target, {
+    row: row + delta.row,
+    col: col + delta.col,
+  });
+
+  if (nextCell === null) {
+    return true;
+  }
+
+  setActiveCell(target, nextCell);
+  nextCell.focus();
+
+  return true;
+}
+
+function getKeyboardNavigationDelta(
+  key: string,
+): { readonly row: number; readonly col: number } | null {
+  switch (key) {
+    case 'ArrowUp':
+      return { row: -1, col: 0 };
+    case 'ArrowDown':
+      return { row: 1, col: 0 };
+    case 'ArrowLeft':
+      return { row: 0, col: -1 };
+    case 'ArrowRight':
+      return { row: 0, col: 1 };
+    default:
+      return null;
+  }
+}
+
+function getCellElementFromEvent(event: Event): HTMLElement | null {
+  if (typeof Element === 'undefined') {
+    return null;
+  }
+
+  const target = event.target;
+
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  return target.closest<HTMLElement>('[data-row][data-col]');
+}
+
+function getCellElementAt(
+  target: EventTarget,
+  coordinate: { readonly row: number; readonly col: number },
+): HTMLElement | null {
+  if (typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) {
+    return null;
+  }
+
+  return target.querySelector<HTMLElement>(
+    `[data-row="${String(coordinate.row)}"][data-col="${String(coordinate.col)}"]`,
+  );
+}
+
+function setActiveCell(target: EventTarget, activeCell: HTMLElement): void {
+  if (typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) {
+    return;
+  }
+
+  target
+    .querySelectorAll<HTMLElement>('[data-row][data-col]')
+    .forEach((cell) => {
+      cell.tabIndex = cell === activeCell ? 0 : -1;
+    });
 }
