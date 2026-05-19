@@ -15,6 +15,10 @@ import {
   createUnifiedPointerHandler,
   type NormalizedPointerDetail,
 } from '../input/pointer';
+import {
+  createBestTimesStore,
+  type BestTimesStore,
+} from '../persistence/best-times';
 import { createBoardView } from './board-view';
 import { createControls } from './controls';
 import { createOutcomeOverlay } from './outcome-overlay';
@@ -77,6 +81,7 @@ export function createApp(
   const elements = queryAppElements(root);
   let state = createGameState(options.initialConfig);
   let suppressNextReveal = false;
+  const bestTimes = createBestTimesStore();
   const subscribers = new Set<StateSubscriber>();
   const boardView = createBoardView(elements.board, state);
   const outcomeOverlay = createOutcomeOverlay(elements.outcomeOverlay, state);
@@ -94,7 +99,11 @@ export function createApp(
 
   subscribers.add(boardView.update);
   subscribers.add(outcomeOverlay.update);
-  subscribers.add(statusBar.update);
+  subscribers.add((nextState) => {
+    statusBar.update(nextState, {
+      bestTimeSeconds: getBestTimeForState(nextState, bestTimes),
+    });
+  });
 
   const handleReveal = (
     event: Event | CustomEvent<NormalizedPointerDetail>,
@@ -139,6 +148,11 @@ export function createApp(
 
   function setState(nextState: GameState): void {
     state = nextState;
+
+    if (state.status === 'won') {
+      bestTimes.recordBestTime(state.config.difficulty, state.elapsedSeconds);
+    }
+
     subscribers.forEach((subscriber) => {
       subscriber(state);
     });
@@ -168,6 +182,17 @@ export function createApp(
       root.replaceChildren();
     },
   };
+}
+
+function getBestTimeForState(
+  state: GameState,
+  bestTimes: BestTimesStore,
+): number | null {
+  if (state.status !== 'won') {
+    return null;
+  }
+
+  return bestTimes.getBestTime(state.config.difficulty);
 }
 
 interface AppElements {
