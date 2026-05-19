@@ -5,6 +5,7 @@ import './styles/board.css';
 import { createGameState } from './game/engine';
 import { createBoardView } from './ui/board-view';
 import { createControls } from './ui/controls';
+import { createOutcomeOverlay } from './ui/outcome-overlay';
 import { createStatusBar } from './ui/status-bar';
 
 const INITIAL_BOARD_CONFIG = {
@@ -36,11 +37,23 @@ appRoot.innerHTML = `
     <main class="app-main" aria-labelledby="app-title">
       <section class="board-panel" aria-label="Game board">
         <div class="board-surface" data-board-view></div>
+        <div data-outcome-overlay></div>
       </section>
 
       <aside class="info-panel" aria-label="Game details">
         <div data-controls></div>
         <div data-status-bar></div>
+        <details class="instructions">
+          <summary>Instructions</summary>
+          <div class="instructions-body">
+            <p>Reveal every safe cell without opening a mine.</p>
+            <ul>
+              <li>Desktop: left click reveals, right click marks.</li>
+              <li>Mobile: tap reveals, long press marks.</li>
+              <li>Flags and question marks help track suspected mines.</li>
+            </ul>
+          </div>
+        </details>
       </aside>
     </main>
   </div>
@@ -48,6 +61,9 @@ appRoot.innerHTML = `
 
 const boardElement = appRoot.querySelector<HTMLElement>('[data-board-view]');
 const controlsElement = appRoot.querySelector<HTMLElement>('[data-controls]');
+const outcomeOverlayElement = appRoot.querySelector<HTMLElement>(
+  '[data-outcome-overlay]',
+);
 const statusBarElement =
   appRoot.querySelector<HTMLElement>('[data-status-bar]');
 const statusSummaryElement = appRoot.querySelector<HTMLElement>(
@@ -62,12 +78,20 @@ if (controlsElement === null) {
   throw new Error('Controls root element was not found.');
 }
 
+if (outcomeOverlayElement === null) {
+  throw new Error('Outcome overlay root element was not found.');
+}
+
 if (statusBarElement === null) {
   throw new Error('Status bar root element was not found.');
 }
 
 const initialGameState = createGameState(INITIAL_BOARD_CONFIG);
 const boardView = createBoardView(boardElement, initialGameState);
+const outcomeOverlay = createOutcomeOverlay(
+  outcomeOverlayElement,
+  initialGameState,
+);
 const statusBar = createStatusBar(statusBarElement, initialGameState, {
   summaryElement: statusSummaryElement,
 });
@@ -77,6 +101,7 @@ createControls(controlsElement, initialGameState.config, {
     const nextState = createGameState(config);
 
     boardView.update(nextState);
+    outcomeOverlay.update(nextState);
     statusBar.update(nextState);
   },
 });
