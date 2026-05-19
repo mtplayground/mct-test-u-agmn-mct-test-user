@@ -11,12 +11,14 @@ TypeScript. It is a client-only app with no backend or database dependency.
   custom board sizes.
 - Guarantees first-click safety by excluding the clicked cell and its neighbors
   from mine placement.
-- Supports reveal, flood-fill of empty regions, flag and question-mark cycling,
-  win/loss detection, and a limited per-game hint action.
+- Supports reveal, chord reveal from numbered cells, flood-fill of empty
+  regions, flag and question-mark cycling, win/loss detection, and a limited
+  per-game hint action.
 - Tracks elapsed time, remaining mine count, status text, and best times for
   preset difficulties in `localStorage`.
-- Provides responsive desktop and mobile play: click/right-click on desktop,
-  tap/long-press on touch devices.
+- Provides responsive desktop and mobile play: click/right-click and
+  double-click on desktop, tap/long-press and fast double-tap normalization on
+  touch devices.
 - Includes dark mode persistence, a mute toggle for Web Audio sound effects,
   instructions, and win/loss overlay feedback.
 
@@ -32,9 +34,10 @@ TypeScript. It is a client-only app with no backend or database dependency.
 ## Architecture
 
 - `src/game/` contains pure game logic: board creation, adjacency, first-click
-  mine placement, reveal/flood-fill, flag cycling, and the game state machine.
+  mine placement, reveal/flood-fill/chord reveal, flag cycling, and the game
+  state machine.
 - `src/input/` normalizes long-press and pointer/keyboard interactions into
-  reveal and flag events.
+  reveal, flag, and double-click intent events.
 - `src/ui/` contains DOM renderers/controllers for the app shell, board,
   controls, status bar, overlay, and theme toggle.
 - `src/persistence/` owns browser storage for best times.
@@ -53,3 +56,5 @@ TypeScript. It is a client-only app with no backend or database dependency.
   `/assets/...` references in `dist/index.html`.
 - Standard checks are `npm run test`, `npm run lint`, `npm run format:check`,
   `npm run build`, and `npm run test:e2e`.
+- Chord reveal has deterministic Playwright coverage for successful win,
+  mismatched-flag no-op, and wrong-flag loss cases.
