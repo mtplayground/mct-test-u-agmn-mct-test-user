@@ -136,6 +136,17 @@ h1 {
   padding: 1rem;
 }
 
+.status-bar {
+  display: grid;
+  gap: 1rem;
+}
+
+.status-text {
+  margin: 0;
+  color: var(--color-accent-strong);
+  font-weight: 800;
+}
+
 .metric-group {
   display: grid;
   gap: 0.75rem;

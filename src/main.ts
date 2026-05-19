@@ -4,6 +4,7 @@ import './styles/board.css';
 
 import { createGameState } from './game/engine';
 import { createBoardView } from './ui/board-view';
+import { createStatusBar } from './ui/status-bar';
 
 const INITIAL_BOARD_CONFIG = {
   rows: 8,
@@ -28,7 +29,7 @@ appRoot.innerHTML = `
         <p class="app-kicker">Minesweeper</p>
         <h1 id="app-title">${safeAppTitle}</h1>
       </div>
-      <div class="status-pill" aria-label="Game status">Ready</div>
+      <div class="status-pill" aria-label="Game status" data-status-summary>Ready</div>
     </header>
 
     <main class="app-main" aria-labelledby="app-title">
@@ -37,28 +38,33 @@ appRoot.innerHTML = `
       </section>
 
       <aside class="info-panel" aria-label="Game details">
-        <section class="metric-group" aria-label="Current game metrics">
-          <div class="metric">
-            <span class="metric-label">Mines</span>
-            <strong class="metric-value">${String(INITIAL_BOARD_CONFIG.mines)}</strong>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Time</span>
-            <strong class="metric-value">0:00</strong>
-          </div>
-        </section>
+        <div data-status-bar></div>
       </aside>
     </main>
   </div>
 `;
 
 const boardElement = appRoot.querySelector<HTMLElement>('[data-board-view]');
+const statusBarElement =
+  appRoot.querySelector<HTMLElement>('[data-status-bar]');
+const statusSummaryElement = appRoot.querySelector<HTMLElement>(
+  '[data-status-summary]',
+);
 
 if (boardElement === null) {
   throw new Error('Board view root element was not found.');
 }
 
-createBoardView(boardElement, createGameState(INITIAL_BOARD_CONFIG));
+if (statusBarElement === null) {
+  throw new Error('Status bar root element was not found.');
+}
+
+const initialGameState = createGameState(INITIAL_BOARD_CONFIG);
+
+createBoardView(boardElement, initialGameState);
+createStatusBar(statusBarElement, initialGameState, {
+  summaryElement: statusSummaryElement,
+});
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
