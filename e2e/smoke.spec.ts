@@ -7,5 +7,6 @@ test('loads the built application', async ({ page }) => {
   await expect(
     page.getByRole('heading', { level: 1, name: 'ZeroClaw' }),
   ).toBeVisible();
-  await expect(page.getByText('Vite and TypeScript are ready.')).toBeVisible();
+  await expect(page.getByLabel('Game status')).toContainText('Ready');
+  await expect(page.getByLabel('Game board')).toBeVisible();
 });
