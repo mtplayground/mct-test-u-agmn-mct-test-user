@@ -62,3 +62,23 @@ test('toggles and persists the selected theme', async ({ page }) => {
 
   await expect(html).toHaveAttribute('data-theme', String(selectedTheme));
 });
+
+test('toggles and persists sound effects', async ({ page }) => {
+  await page.goto('/');
+
+  const toggle = page.getByRole('button', { name: 'Enable sound effects' });
+
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+  await toggle.click();
+
+  await expect(
+    page.getByRole('button', { name: 'Mute sound effects' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+
+  await page.reload();
+
+  await expect(
+    page.getByRole('button', { name: 'Mute sound effects' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+});

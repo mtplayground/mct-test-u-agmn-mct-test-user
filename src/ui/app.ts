@@ -4,6 +4,7 @@ import {
   createGameState,
   dispatchGameAction,
   type GameAction,
+  type GameActionStatus,
 } from '../game/engine';
 import {
   LONG_PRESS_EVENT_TYPE,
@@ -15,6 +16,7 @@ import {
   createUnifiedPointerHandler,
   type NormalizedPointerDetail,
 } from '../input/pointer';
+import { createSfxController, type SfxName } from '../audio/sfx';
 import {
   createBestTimesStore,
   type BestTimesStore,
@@ -53,6 +55,7 @@ export function createApp(
         </div>
         <div class="header-actions">
           <button class="theme-toggle" data-theme-toggle type="button">Theme</button>
+          <button class="sfx-toggle" data-sfx-toggle type="button">Sound off</button>
           <div class="status-pill" aria-label="Game status" data-status-summary>Ready</div>
         </div>
       </header>
@@ -93,6 +96,7 @@ export function createApp(
     summaryElement: elements.statusSummary,
   });
   const themeToggle = createThemeToggle(elements.themeToggle);
+  const sfx = createSfxController(elements.sfxToggle);
   const controls = createControls(elements.controls, state.config, {
     onRestart: (config) => {
       setState(createGameState(config));
@@ -148,6 +152,7 @@ export function createApp(
 
     if (result.state !== state) {
       setState(result.state);
+      playActionSound(result.status);
     }
   }
 
@@ -161,6 +166,14 @@ export function createApp(
     subscribers.forEach((subscriber) => {
       subscriber(state);
     });
+  }
+
+  function playActionSound(status: GameActionStatus): void {
+    const sound = getSfxForActionStatus(status);
+
+    if (sound !== null) {
+      sfx.play(sound);
+    }
   }
 
   elements.board.addEventListener(REVEAL_EVENT_TYPE, handleReveal);
@@ -182,6 +195,7 @@ export function createApp(
       controls.destroy();
       statusBar.destroy();
       themeToggle.destroy();
+      sfx.destroy();
       outcomeOverlay.destroy();
       boardView.destroy();
       subscribers.clear();
@@ -201,12 +215,29 @@ function getBestTimeForState(
   return bestTimes.getBestTime(state.config.difficulty);
 }
 
+function getSfxForActionStatus(status: GameActionStatus): SfxName | null {
+  switch (status) {
+    case 'started':
+    case 'revealed':
+      return 'reveal';
+    case 'marked':
+      return 'flag';
+    case 'won':
+      return 'win';
+    case 'lost':
+      return 'explosion';
+    case 'ignored':
+      return null;
+  }
+}
+
 interface AppElements {
   readonly board: HTMLElement;
   readonly controls: HTMLElement;
   readonly outcomeOverlay: HTMLElement;
   readonly statusBar: HTMLElement;
   readonly statusSummary: HTMLElement | null;
+  readonly sfxToggle: HTMLButtonElement;
   readonly themeToggle: HTMLButtonElement;
 }
 
@@ -217,6 +248,11 @@ function queryAppElements(root: HTMLElement): AppElements {
     outcomeOverlay: queryRequiredElement(root, '[data-outcome-overlay]'),
     statusBar: queryRequiredElement(root, '[data-status-bar]'),
     statusSummary: root.querySelector<HTMLElement>('[data-status-summary]'),
+    sfxToggle: queryRequiredElement(
+      root,
+      '[data-sfx-toggle]',
+      HTMLButtonElement,
+    ),
     themeToggle: queryRequiredElement(
       root,
       '[data-theme-toggle]',
