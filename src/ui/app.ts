@@ -101,20 +101,22 @@ export function createApp(
   });
   const themeToggle = createThemeToggle(elements.themeToggle);
   const sfx = createSfxController(elements.sfxToggle);
+  const pointerHandler = createUnifiedPointerHandler(elements.board);
+  const longPressDetector = createLongPressDetector(elements.board);
   const controls = createControls(elements.controls, state.config, {
     initialHintsRemaining: hintsRemaining,
     onHint: () => {
       useHint();
     },
     onRestart: (config) => {
+      suppressNextReveal = false;
+      longPressDetector.cancel();
       hintsRemaining = HINTS_PER_GAME;
       setState(createGameState(config));
       controls.update(config);
       controls.updateHints(getHintControlState(state, hintsRemaining));
     },
   });
-  const pointerHandler = createUnifiedPointerHandler(elements.board);
-  const longPressDetector = createLongPressDetector(elements.board);
 
   subscribers.add(boardView.update);
   subscribers.add(outcomeOverlay.update);

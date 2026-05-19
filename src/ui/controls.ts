@@ -425,7 +425,9 @@ function updateMineLimit(elements: FormElements): void {
 }
 
 function readInteger(input: HTMLInputElement): number {
-  return Number.parseInt(input.value, 10);
+  const value = Number(input.value);
+
+  return Number.isInteger(value) ? value : Number.NaN;
 }
 
 function isIntegerInRange(value: number, min: number, max: number): boolean {

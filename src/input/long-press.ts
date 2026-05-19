@@ -28,6 +28,8 @@ export function createLongPressDetector(
   let timeoutHandle: TimeoutHandle | null = null;
   let sourceEvent: Event | null = null;
   let destroyed = false;
+  const scrollTarget =
+    typeof window === 'undefined' ? null : (window as EventTarget);
 
   const cancel = (): void => {
     if (timeoutHandle !== null) {
@@ -66,6 +68,7 @@ export function createLongPressDetector(
   target.addEventListener('pointerup', cancel, { passive: true });
   target.addEventListener('pointercancel', cancel, { passive: true });
   target.addEventListener('scroll', cancel, { passive: true });
+  scrollTarget?.addEventListener('scroll', cancel, { passive: true });
 
   return {
     get isPending() {
@@ -84,6 +87,7 @@ export function createLongPressDetector(
       target.removeEventListener('pointerup', cancel);
       target.removeEventListener('pointercancel', cancel);
       target.removeEventListener('scroll', cancel);
+      scrollTarget?.removeEventListener('scroll', cancel);
     },
   };
 }

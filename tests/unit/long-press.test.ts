@@ -10,6 +10,7 @@ import {
 describe('createLongPressDetector', () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it('emits a longpress event after the default threshold', () => {
@@ -75,6 +76,27 @@ describe('createLongPressDetector', () => {
       expect(events).toHaveLength(0);
     },
   );
+
+  it('cancels pending longpress when the page scrolls', () => {
+    vi.useFakeTimers();
+    const target = new EventTarget();
+    const scrollTarget = new EventTarget();
+    const events: Event[] = [];
+
+    vi.stubGlobal('window', scrollTarget);
+
+    const detector = createLongPressDetector(target);
+
+    target.addEventListener(LONG_PRESS_EVENT_TYPE, (event) => {
+      events.push(event);
+    });
+    target.dispatchEvent(new Event('pointerdown'));
+    scrollTarget.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(DEFAULT_LONG_PRESS_THRESHOLD_MS);
+
+    expect(detector.isPending).toBe(false);
+    expect(events).toHaveLength(0);
+  });
 
   it('can be canceled manually', () => {
     vi.useFakeTimers();
