@@ -6,9 +6,13 @@ export interface StatusBarOptions {
   readonly summaryElement?: HTMLElement | null;
 }
 
+export interface StatusBarUpdateOptions {
+  readonly bestTimeSeconds?: number | null;
+}
+
 export interface StatusBar {
   readonly element: HTMLElement;
-  update: (state: GameState) => void;
+  update: (state: GameState, options?: StatusBarUpdateOptions) => void;
   destroy: () => void;
 }
 
@@ -24,10 +28,16 @@ export function createStatusBar(
   const mineCountElement = queryRequiredElement(element, '[data-status-mines]');
   const timerElement = queryRequiredElement(element, '[data-status-timer]');
   const statusTextElement = queryRequiredElement(element, '[data-status-text]');
+  const bestTimeRowElement = queryRequiredElement(
+    element,
+    '[data-status-best-row]',
+  );
+  const bestTimeElement = queryRequiredElement(element, '[data-status-best]');
   const now = options.now ?? Date.now;
   const intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
   const summaryElement = options.summaryElement ?? null;
   let currentState = initialState;
+  let currentBestTimeSeconds: number | null = null;
   let intervalId: number | null = null;
   let frameId: number | null = null;
 
@@ -41,6 +51,12 @@ export function createStatusBar(
       getDisplayElapsedSeconds(currentState, now()),
     );
     statusTextElement.textContent = statusText;
+    bestTimeRowElement.hidden =
+      currentState.status !== 'won' || currentBestTimeSeconds === null;
+    bestTimeElement.textContent =
+      currentBestTimeSeconds === null
+        ? ''
+        : formatElapsedSeconds(currentBestTimeSeconds);
 
     if (summaryElement !== null) {
       summaryElement.textContent = statusText;
@@ -75,8 +91,12 @@ export function createStatusBar(
     intervalId = window.setInterval(scheduleRender, intervalMs);
   };
 
-  const update = (state: GameState): void => {
+  const update = (
+    state: GameState,
+    updateOptions: StatusBarUpdateOptions = {},
+  ): void => {
     currentState = state;
+    currentBestTimeSeconds = updateOptions.bestTimeSeconds ?? null;
 
     if (isTimerRunning(currentState)) {
       startTimer();
@@ -136,6 +156,7 @@ function createStatusBarElement(): HTMLElement {
   metricGroup.append(
     createMetricElement('Mines', 'statusMines'),
     createMetricElement('Time', 'statusTimer'),
+    createMetricElement('Best', 'statusBest', 'statusBestRow'),
   );
 
   statusBar.append(statusText, metricGroup);
@@ -143,9 +164,18 @@ function createStatusBarElement(): HTMLElement {
   return statusBar;
 }
 
-function createMetricElement(label: string, dataKey: string): HTMLElement {
+function createMetricElement(
+  label: string,
+  dataKey: string,
+  rowDataKey?: string,
+): HTMLElement {
   const metric = document.createElement('div');
   metric.className = 'metric';
+
+  if (rowDataKey !== undefined) {
+    metric.dataset[rowDataKey] = '';
+    metric.hidden = true;
+  }
 
   const labelElement = document.createElement('span');
   labelElement.className = 'metric-label';
