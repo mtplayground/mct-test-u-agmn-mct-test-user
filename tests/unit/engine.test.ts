@@ -153,6 +153,91 @@ describe('dispatchGameAction', () => {
     expect(cellAt(result.state.cells, 1, 1).state).toBe('revealed');
   });
 
+  it('wins when reveal-adjacent reveals the remaining safe neighbors', () => {
+    const cells = withCellStates(
+      computeAdjacentMineCounts(
+        withMines(createEmptyBoard({ rows: 2, cols: 2 }), [{ row: 0, col: 0 }]),
+      ),
+      [
+        ['flagged', 'revealed'],
+        ['hidden', 'hidden'],
+      ],
+    );
+    const state = playingState({
+      cells,
+      config: { rows: 2, cols: 2, mines: 1, difficulty: 'custom' },
+      startedAt: 1_000,
+    });
+    const result = dispatchGameAction(
+      state,
+      { type: 'reveal-adjacent', coordinate: { row: 0, col: 1 } },
+      { now: fixedNow(3_250) },
+    );
+
+    expect(result.status).toBe('won');
+    expect(result.state.status).toBe('won');
+    expect(result.state.endedAt).toBe(3_250);
+    expect(result.state.elapsedSeconds).toBe(2);
+    expect(result.state.revealedCount).toBe(3);
+    expect(cellAt(result.state.cells, 1, 0).state).toBe('revealed');
+    expect(cellAt(result.state.cells, 1, 1).state).toBe('revealed');
+  });
+
+  it('ignores reveal-adjacent when the flagged neighbor count mismatches', () => {
+    const cells = withCellStates(
+      computeAdjacentMineCounts(
+        withMines(createEmptyBoard({ rows: 2, cols: 2 }), [{ row: 0, col: 0 }]),
+      ),
+      [
+        ['hidden', 'revealed'],
+        ['hidden', 'hidden'],
+      ],
+    );
+    const state = playingState({
+      cells,
+      config: { rows: 2, cols: 2, mines: 1, difficulty: 'custom' },
+      startedAt: 1_000,
+    });
+    const result = dispatchGameAction(state, {
+      type: 'reveal-adjacent',
+      coordinate: { row: 0, col: 1 },
+    });
+
+    expect(result.status).toBe('ignored');
+    expect(result.state).toBe(state);
+    expect(cellAt(result.state.cells, 1, 0).state).toBe('hidden');
+    expect(cellAt(result.state.cells, 1, 1).state).toBe('hidden');
+  });
+
+  it('loses when reveal-adjacent reveals an unflagged mine', () => {
+    const cells = withCellStates(
+      computeAdjacentMineCounts(
+        withMines(createEmptyBoard({ rows: 2, cols: 2 }), [{ row: 0, col: 0 }]),
+      ),
+      [
+        ['hidden', 'revealed'],
+        ['hidden', 'flagged'],
+      ],
+    );
+    const state = playingState({
+      cells,
+      config: { rows: 2, cols: 2, mines: 1, difficulty: 'custom' },
+      startedAt: 1_000,
+    });
+    const result = dispatchGameAction(
+      state,
+      { type: 'reveal-adjacent', coordinate: { row: 0, col: 1 } },
+      { now: fixedNow(6_750) },
+    );
+
+    expect(result.status).toBe('lost');
+    expect(result.state.status).toBe('lost');
+    expect(result.state.endedAt).toBe(6_750);
+    expect(result.state.elapsedSeconds).toBe(5);
+    expect(cellAt(result.state.cells, 0, 0).state).toBe('revealed');
+    expect(cellAt(result.state.cells, 1, 1).state).toBe('flagged');
+  });
+
   it('ignores actions after the game has ended', () => {
     const wonState = {
       ...playingState({ cells: createEmptyBoard({ rows: 1, cols: 1 }) }),

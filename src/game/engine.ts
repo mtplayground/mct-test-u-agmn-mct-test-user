@@ -11,11 +11,12 @@ import {
   placeMinesWithFirstClickSafety,
   type RandomSource,
 } from './first-click';
-import { revealCell } from './reveal';
+import { revealAdjacentCells, revealCell } from './reveal';
 
 export type GameAction =
   | { readonly type: 'reveal'; readonly coordinate: Coordinate }
-  | { readonly type: 'flag'; readonly coordinate: Coordinate };
+  | { readonly type: 'flag'; readonly coordinate: Coordinate }
+  | { readonly type: 'reveal-adjacent'; readonly coordinate: Coordinate };
 
 export type GameActionStatus =
   | 'started'
@@ -61,6 +62,10 @@ export function dispatchGameAction(
 
   if (action.type === 'flag') {
     return dispatchFlagAction(state, action.coordinate, options);
+  }
+
+  if (action.type === 'reveal-adjacent') {
+    return dispatchRevealAdjacentAction(state, action.coordinate, options);
   }
 
   return dispatchRevealAction(state, action.coordinate, options);
@@ -182,6 +187,59 @@ function dispatchRevealAction(
       now,
     }),
     status: state.status === 'ready' ? 'started' : 'revealed',
+  };
+}
+
+function dispatchRevealAdjacentAction(
+  state: GameState,
+  coordinate: Coordinate,
+  options: DispatchOptions,
+): GameActionResult {
+  assertCoordinateInBounds(state.cells, coordinate);
+
+  const now = readNow(options);
+  const startedAt = state.startedAt ?? now;
+  const revealResult = revealAdjacentCells(state.cells, coordinate);
+
+  if (revealResult.status === 'ignored') {
+    return { state, status: 'ignored' };
+  }
+
+  if (revealResult.hitMine) {
+    return {
+      state: buildStateAfterReveal(state, {
+        cells: revealResult.board,
+        status: 'lost',
+        startedAt,
+        endedAt: now,
+        now,
+      }),
+      status: 'lost',
+    };
+  }
+
+  if (hasWonGame(revealResult.board)) {
+    return {
+      state: buildStateAfterReveal(state, {
+        cells: revealResult.board,
+        status: 'won',
+        startedAt,
+        endedAt: now,
+        now,
+      }),
+      status: 'won',
+    };
+  }
+
+  return {
+    state: buildStateAfterReveal(state, {
+      cells: revealResult.board,
+      status: 'playing',
+      startedAt,
+      endedAt: null,
+      now,
+    }),
+    status: 'revealed',
   };
 }
 
