@@ -166,6 +166,12 @@ h1 {
   gap: 0.75rem;
 }
 
+.controls-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .custom-fields {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -210,6 +216,21 @@ input[aria-invalid='true'] {
   background: var(--color-accent);
   color: var(--color-page);
   font-weight: 800;
+}
+
+.secondary-button {
+  min-height: 2.625rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 0.625rem 0.875rem;
+  background: var(--color-surface);
+  color: var(--color-accent-strong);
+  font-weight: 800;
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .status-bar {

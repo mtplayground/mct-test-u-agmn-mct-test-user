@@ -3,6 +3,7 @@ import { type Coordinate } from '../game/board';
 import {
   createGameState,
   dispatchGameAction,
+  getHintCoordinate,
   type GameAction,
   type GameActionStatus,
 } from '../game/engine';
@@ -39,6 +40,8 @@ export interface AppController {
 }
 
 type StateSubscriber = (state: GameState) => void;
+
+const HINTS_PER_GAME = 3;
 
 export function createApp(
   root: HTMLElement,
@@ -88,6 +91,7 @@ export function createApp(
   const elements = queryAppElements(root);
   let state = createGameState(options.initialConfig);
   let suppressNextReveal = false;
+  let hintsRemaining = HINTS_PER_GAME;
   const bestTimes = createBestTimesStore();
   const subscribers = new Set<StateSubscriber>();
   const boardView = createBoardView(elements.board, state);
@@ -98,9 +102,15 @@ export function createApp(
   const themeToggle = createThemeToggle(elements.themeToggle);
   const sfx = createSfxController(elements.sfxToggle);
   const controls = createControls(elements.controls, state.config, {
+    initialHintsRemaining: hintsRemaining,
+    onHint: () => {
+      useHint();
+    },
     onRestart: (config) => {
+      hintsRemaining = HINTS_PER_GAME;
       setState(createGameState(config));
       controls.update(config);
+      controls.updateHints(getHintControlState(state, hintsRemaining));
     },
   });
   const pointerHandler = createUnifiedPointerHandler(elements.board);
@@ -166,6 +176,36 @@ export function createApp(
     subscribers.forEach((subscriber) => {
       subscriber(state);
     });
+    controls.updateHints(getHintControlState(state, hintsRemaining));
+  }
+
+  function useHint(): void {
+    if (hintsRemaining <= 0 || isTerminalState(state)) {
+      controls.updateHints(getHintControlState(state, hintsRemaining));
+      return;
+    }
+
+    const coordinate = getHintCoordinate(state);
+
+    if (coordinate === null) {
+      controls.updateHints(getHintControlState(state, hintsRemaining));
+      return;
+    }
+
+    const result = dispatchGameAction(state, {
+      type: 'reveal',
+      coordinate,
+    });
+
+    if (result.state === state) {
+      controls.updateHints(getHintControlState(state, hintsRemaining));
+      return;
+    }
+
+    hintsRemaining -= 1;
+    setState(result.state);
+    boardView.highlightCell(coordinate);
+    playActionSound(result.status);
   }
 
   function playActionSound(status: GameActionStatus): void {
@@ -229,6 +269,23 @@ function getSfxForActionStatus(status: GameActionStatus): SfxName | null {
     case 'ignored':
       return null;
   }
+}
+
+function getHintControlState(
+  state: GameState,
+  hintsRemaining: number,
+): { readonly remaining: number; readonly disabled: boolean } {
+  return {
+    remaining: hintsRemaining,
+    disabled:
+      hintsRemaining <= 0 ||
+      isTerminalState(state) ||
+      getHintCoordinate(state) === null,
+  };
+}
+
+function isTerminalState(state: GameState): boolean {
+  return state.status === 'won' || state.status === 'lost';
 }
 
 interface AppElements {
