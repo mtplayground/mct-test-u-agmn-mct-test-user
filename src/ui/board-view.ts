@@ -4,6 +4,7 @@ import { getBoardSize, type Coordinate } from '../game/board';
 export interface BoardView {
   readonly element: HTMLElement;
   update: (state: GameState) => void;
+  highlightCell: (coordinate: Coordinate, durationMs?: number) => void;
   destroy: () => void;
 }
 
@@ -24,12 +25,15 @@ const MINE_ICON = `
   </svg>
 `;
 
+const DEFAULT_HINT_HIGHLIGHT_MS = 1000;
+
 export function createBoardView(
   element: HTMLElement,
   initialState: GameState,
 ): BoardView {
   const cellElements = new Map<string, HTMLButtonElement>();
   const cellSignatures = new Map<string, string>();
+  const highlightTimers = new Map<string, number>();
   let currentDimensions: BoardDimensions | null = null;
 
   const update = (state: GameState): void => {
@@ -69,10 +73,40 @@ export function createBoardView(
   return {
     element,
     update,
+    highlightCell: (
+      coordinate: Coordinate,
+      durationMs = DEFAULT_HINT_HIGHLIGHT_MS,
+    ) => {
+      const key = keyFor(coordinate);
+      const cellElement = cellElements.get(key);
+
+      if (cellElement === undefined) {
+        return;
+      }
+
+      const existingTimer = highlightTimers.get(key);
+
+      if (existingTimer !== undefined) {
+        window.clearTimeout(existingTimer);
+      }
+
+      cellElement.classList.add('is-hinted');
+      highlightTimers.set(
+        key,
+        window.setTimeout(() => {
+          cellElement.classList.remove('is-hinted');
+          highlightTimers.delete(key);
+        }, durationMs),
+      );
+    },
     destroy: () => {
+      highlightTimers.forEach((timerId) => {
+        window.clearTimeout(timerId);
+      });
       element.replaceChildren();
       cellElements.clear();
       cellSignatures.clear();
+      highlightTimers.clear();
       currentDimensions = null;
     },
   };

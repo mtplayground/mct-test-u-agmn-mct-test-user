@@ -2,12 +2,20 @@ import type { BoardConfig, Difficulty } from '../types';
 
 export interface ControlsOptions {
   readonly onRestart: (config: BoardConfig) => void;
+  readonly onHint?: () => void;
+  readonly initialHintsRemaining?: number;
 }
 
 export interface Controls {
   readonly element: HTMLElement;
   update: (config: BoardConfig) => void;
+  updateHints: (state: HintControlState) => void;
   destroy: () => void;
+}
+
+export interface HintControlState {
+  readonly remaining: number;
+  readonly disabled?: boolean;
 }
 
 export interface ValidationResult {
@@ -25,6 +33,7 @@ interface FormElements {
   readonly mines: HTMLInputElement;
   readonly error: HTMLElement;
   readonly form: HTMLFormElement;
+  readonly hintButton: HTMLButtonElement;
 }
 
 const MIN_DIMENSION = 5;
@@ -60,6 +69,10 @@ export function createControls(
   element.replaceChildren(createControlsElement(initialConfig));
 
   const elements = queryFormElements(element);
+  let currentHintState: HintControlState = {
+    remaining: options.initialHintsRemaining ?? 0,
+    disabled: options.onHint === undefined,
+  };
 
   const render = (config: BoardConfig): void => {
     elements.difficulty.value = config.difficulty;
@@ -68,6 +81,7 @@ export function createControls(
     elements.mines.value = String(config.mines);
     renderCustomFields(elements);
     renderValidation(elements, getSelectedConfig(elements).validation);
+    renderHint(elements, currentHintState);
   };
 
   const handleDifficultyChange = (): void => {
@@ -103,23 +117,33 @@ export function createControls(
     options.onRestart(selected.config);
   };
 
+  const handleHint = (): void => {
+    options.onHint?.();
+  };
+
   elements.difficulty.addEventListener('change', handleDifficultyChange);
   elements.rows.addEventListener('input', handleInput);
   elements.cols.addEventListener('input', handleInput);
   elements.mines.addEventListener('input', handleInput);
   elements.form.addEventListener('submit', handleSubmit);
+  elements.hintButton.addEventListener('click', handleHint);
 
   render(initialConfig);
 
   return {
     element,
     update: render,
+    updateHints: (state) => {
+      currentHintState = state;
+      renderHint(elements, currentHintState);
+    },
     destroy: () => {
       elements.difficulty.removeEventListener('change', handleDifficultyChange);
       elements.rows.removeEventListener('input', handleInput);
       elements.cols.removeEventListener('input', handleInput);
       elements.mines.removeEventListener('input', handleInput);
       elements.form.removeEventListener('submit', handleSubmit);
+      elements.hintButton.removeEventListener('click', handleHint);
       element.replaceChildren();
     },
   };
@@ -233,7 +257,16 @@ function createControlsElement(config: BoardConfig): HTMLElement {
   restartButton.type = 'submit';
   restartButton.textContent = 'Restart';
 
-  form.append(difficultyField, customFields, error, restartButton);
+  const hintButton = document.createElement('button');
+  hintButton.className = 'secondary-button';
+  hintButton.type = 'button';
+  hintButton.dataset.controlsHint = '';
+
+  const actionRow = document.createElement('div');
+  actionRow.className = 'controls-actions';
+  actionRow.append(restartButton, hintButton);
+
+  form.append(difficultyField, customFields, error, actionRow);
   section.append(form);
 
   return section;
@@ -301,6 +334,11 @@ function queryFormElements(root: HTMLElement): FormElements {
     ),
     error: queryRequiredElement(root, '[data-controls-error]', HTMLElement),
     form: queryRequiredElement(root, '[data-controls-form]', HTMLFormElement),
+    hintButton: queryRequiredElement(
+      root,
+      '[data-controls-hint]',
+      HTMLButtonElement,
+    ),
   };
 }
 
@@ -367,6 +405,14 @@ function renderValidation(
   elements.rows.setAttribute('aria-invalid', String(!validation.valid));
   elements.cols.setAttribute('aria-invalid', String(!validation.valid));
   elements.mines.setAttribute('aria-invalid', String(!validation.valid));
+}
+
+function renderHint(elements: FormElements, state: HintControlState): void {
+  const remaining = Math.max(0, state.remaining);
+  const disabled = state.disabled === true || remaining === 0;
+
+  elements.hintButton.disabled = disabled;
+  elements.hintButton.textContent = `Hint (${String(remaining)})`;
 }
 
 function updateMineLimit(elements: FormElements): void {

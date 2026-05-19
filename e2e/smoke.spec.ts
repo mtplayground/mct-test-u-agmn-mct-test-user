@@ -82,3 +82,20 @@ test('toggles and persists sound effects', async ({ page }) => {
     page.getByRole('button', { name: 'Mute sound effects' }),
   ).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('uses a limited hint to reveal and highlight a safe cell', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Hint (3)' }).click();
+
+  await expect(page.getByRole('button', { name: 'Hint (2)' })).toBeEnabled();
+  await expect(page.getByLabel('Game status', { exact: true })).toContainText(
+    'Playing',
+  );
+  await expect(page.locator('.board-cell.is-hinted')).toHaveCount(1);
+  await expect(
+    page.locator('.board-cell.is-hinted[data-state="revealed"]'),
+  ).toHaveCount(1);
+});
